@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fuel route: {{ data.start.resolved }} to {{ data.finish.resolved }}</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  html, body { height: 100%; margin: 0; font: 14px system-ui, sans-serif; }
+  #map { height: calc(100% - 64px); }
+  header { height: 64px; box-sizing: border-box; padding: 8px 14px; background: #14213d; color: #fff; }
+  header b { font-size: 16px; } header span { margin-right: 18px; }
+</style>
+</head>
+<body>
+<header>
+  <b>{{ data.start.resolved }} &rarr; {{ data.finish.resolved }}</b><br>
+  <span>{{ data.distance_miles }} mi</span>
+  <span>{{ data.total_gallons_purchased }} gal purchased</span>
+  <span><b>${{ data.total_fuel_cost }}</b> total fuel</span>
+  <span>{{ data.fuel_stops|length }} stop{{ data.fuel_stops|length|pluralize }}</span>
+</header>
+<div id="map"></div>
+{{ data|json_script:"route-data" }}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const d = JSON.parse(document.getElementById("route-data").textContent);
+  const map = L.map("map");
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 18, attribution: "&copy; OpenStreetMap contributors"}).addTo(map);
+  const line = L.geoJSON(d.route, {style: {color: "#1d4ed8", weight: 4}}).addTo(map);
+  map.fitBounds(line.getBounds(), {padding: [30, 30]});
+  L.marker([d.start.lat, d.start.lon]).addTo(map).bindPopup("<b>Start</b><br>" + d.start.resolved);
+  L.marker([d.finish.lat, d.finish.lon]).addTo(map).bindPopup("<b>Finish</b><br>" + d.finish.resolved);
+  d.fuel_stops.forEach((s, i) => {
+    L.circleMarker([s.location.lat, s.location.lon], {radius: 9, color: "#b91c1c", fillColor: "#ef4444", fillOpacity: 0.9})
+      .addTo(map)
+      .bindPopup(`<b>Stop ${i + 1}: ${s.name}</b><br>${s.city}, ${s.state} (mile ${s.route_mile})<br>` +
+                 `${s.gallons} gal @ $${s.price_per_gallon.toFixed(3)} = <b>$${s.cost.toFixed(2)}</b>`);
+  });
+</script>
+</body>
+</html>
